@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
     char allMoves[200][6];
     char pieceCaptures[100][6];
     char kingCaptures[10][6];
+
     int currentCount = 0;
     int pieceCaptureCount = 0;
     int kingCaptureCount = 0;
@@ -75,7 +76,7 @@ int main(int argc, char* argv[])
         pieceCaptureCount = 0;
         kingCaptureCount = 0;
 
-        int bytesRead = read(read_FD, &chessBoard[0][0], 64);
+        int bytesRead = read(read_FD, &chessBoard, 64);
         if(bytesRead == 0)
         {
             cout << "Black player: Game Over" << endl;
