@@ -1,9 +1,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 using namespace std;
 
 /*
@@ -35,10 +32,13 @@ BOARD:
 
 TERMINATION:
     1. King Captured = GG
-    2. 20 total moves like white = 20 and black = 20
+    2. 20 total moves then draw
+
+EXECV vs EXECLP:
+    1.  EXECLP: You list the arguments one by one and MUST always TERMINATE with last param = NULL
+    2.  EXECV : You must send parameters through an array
 
 */
-
 
 void createChessBoard(char board[8][8])
 {
@@ -116,6 +116,87 @@ int main()
 
     createChessBoard(chessBoard);
     printBoard(chessBoard);
+
+    int white_controller[2];
+    int controller_white[2];
+
+    int black_controller[2];
+    int controller_black[2];
+
+    if((pipe(white_controller) == -1) || (pipe(controller_white) == -1) || (pipe(black_controller) == -1) || (pipe(controller_black) == -1))
+    {
+        cout << "Error creating pipe" << endl;
+        return -1;
+    }
+
+    int pid = fork();
+
+    if(pid == -1)
+    {
+        cout << "Error forking Controller 1st time" << endl;
+        return -1;
+    }
+
+    if(pid == 0) // white player
+    {
+        close(black_controller[0]); 
+        close(black_controller[1]); 
+        close(controller_black[0]); 
+        close(controller_black[1]); 
+
+        close(white_controller[0]); // WHITE WRITES TO CONTROLLER
+        close(controller_white[1]); // WHITE READS FROM CONTROLLER
+
+        string read_FD = to_string(controller_white[0]);
+        string write_FD = to_string(white_controller[1]);
+
+        if(execlp("./whitePlayer", "whitePlayer", read_FD.c_str(), write_FD.c_str(), NULL) == -1)
+        {
+            perror("execlp failed");
+            exit(1);
+        }
+    }
+    if(pid > 0)
+    {
+        int pid2 =  fork();
+
+        if(pid2 == -1)
+        {
+            cout << "Error forking Controller 2nd time" << endl;
+            return -1;
+        }
+
+        if(pid2 == 0)
+        {
+            close(white_controller[0]);
+            close(white_controller[1]);
+            close(controller_white[0]);
+            close(controller_white[1]);
+    
+            close(black_controller[0]);
+            close(controller_black[1]);
+    
+            string read_FD = to_string(controller_black[0]);
+            string write_FD = to_string(black_controller[1]);
+    
+            char* args[] = {(char*)"blackPlayer", (char*)read_FD.c_str(), (char*)write_FD.c_str(), NULL};
+            
+            if(execv("./blackPlayer", args) == -1)
+            {
+                perror("execv failed");
+                exit(1);
+            }
+        }
+        
+        if(pid2 > 0)
+        {
+            close(controller_white[0]);
+            close(controller_black[0]);
+
+            close(white_controller[1]);
+            close(black_controller[1]);
+        }
+    }
 
     return 0;
 }
