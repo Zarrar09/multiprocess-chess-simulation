@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <unistd.h>
 #include <sys/wait.h>
 using namespace std;
@@ -195,6 +196,9 @@ int main()
 
             close(white_controller[1]);
             close(black_controller[1]);
+
+            // game loop begins
+            write(controller_white[1], &chessBoard, 64);
         }
     }
 
